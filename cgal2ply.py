@@ -7,8 +7,8 @@ property float x
 property float y
 property float z
 element edge %i
-property int v1
-property int v2
+property int vertex1
+property int vertex2
 end_header"""
 
 f = open(sys.argv[1])
