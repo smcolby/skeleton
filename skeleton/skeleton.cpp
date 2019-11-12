@@ -22,25 +22,6 @@ typedef Skeletonization::Skeleton                                    Skeleton;
 typedef Skeleton::vertex_descriptor                                  Skeleton_vertex;
 typedef Skeleton::edge_descriptor                                    Skeleton_edge;
 
-// Property map associating a facet with an integer as id to an
-// element in a vector stored internally
-template<class ValueType>
-struct Facet_with_id_pmap
-    : public boost::put_get_helper<ValueType&,
-             Facet_with_id_pmap<ValueType> >
-{
-    typedef face_descriptor key_type;
-    typedef ValueType value_type;
-    typedef value_type& reference;
-    typedef boost::lvalue_property_map_tag category;
-    Facet_with_id_pmap(
-      std::vector<ValueType>& internal_vector
-    ) : internal_vector(internal_vector) { }
-    reference operator[](key_type key) const
-    { return internal_vector[key->id()]; }
-private:
-    std::vector<ValueType>& internal_vector;
-};
 
 //only needed for the display of the skeleton as maximal polylines
 struct Display_polylines{
@@ -86,40 +67,22 @@ int main(int argc, char* argv[])
   CGAL::split_graph_into_polylines(skeleton, display);
   output.close();
 
-  // init the polyhedron simplex indices
-  CGAL::set_halfedgeds_items_id(tmesh);
-
   //for each input vertex compute its distance to the skeleton
-  std::vector<double> distances(num_vertices(tmesh));
+  output.open((argc>3)?argv[3]:"dist.cgal");
+  std::vector<double> distances(num_vertices(skeleton));
   BOOST_FOREACH(Skeleton_vertex v, CGAL::make_range(vertices(skeleton)) )
   {
     const Point& skel_pt = skeleton[v].point;
+    double dist = 0;
+    double n = 0;
     BOOST_FOREACH(vertex_descriptor mesh_v, skeleton[v].vertices)
     {
       const Point& mesh_pt = mesh_v->point();
-      distances[mesh_v->id()] = std::sqrt(CGAL::squared_distance(skel_pt, mesh_pt));
+      dist += std::sqrt(CGAL::squared_distance(skel_pt, mesh_pt));
+      n += 1;
     }
+    output << dist << ' ' << n << "\n";
   }
-
-  // create a property-map for sdf values
-  std::vector<double> sdf_values( num_faces(tmesh) );
-  Facet_with_id_pmap<double> sdf_property_map(sdf_values);
-
-  // compute sdf values with skeleton
-  BOOST_FOREACH(face_descriptor f, faces(tmesh))
-  {
-    double dist = 0;
-    BOOST_FOREACH(halfedge_descriptor hd, halfedges_around_face(halfedge(f, tmesh), tmesh))
-      dist += distances[target(hd, tmesh)->id()];
-    sdf_property_map[f] = dist / 3.;
-  }
-
-  // post-process the sdf values
-  CGAL::sdf_values_postprocessing(tmesh, sdf_property_map);
-
-  // write distance map
-  output.open((argc>3)?argv[3]:"dist.cgal");
-  BOOST_FOREACH(face_descriptor f, faces(tmesh))
-    output << sdf_property_map[f] << "\n";
+      
   return 0;
 }
