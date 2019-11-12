@@ -17,8 +17,8 @@ property float x
 property float y
 property float z
 element edge %i
-property int v1
-property int v2
+property int vertex1
+property int vertex2
 end_header
 """
 
@@ -49,4 +49,5 @@ for i in range(0, len(ar)):
 with open(path['ply'], 'w') as f:
     f.write(header % (len(ve), len(ed)))
     f.write('\n'.join(ve))
+    f.write('\n')
     f.write('\n'.join(ed))
